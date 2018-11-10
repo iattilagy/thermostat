@@ -1,34 +1,48 @@
 #include <Arduino.h>
 #include <Ticker.h>
 #include <InternetConnection.h>
-#include <MetheoData.h>
-#include <OledDisplay.h>
-#include <Thermostat.h>
+#include <Data.h>
+#include <MatrixDisplay.h>
+#include <thermostat.h>
 #include <EEPROM.h>
 
-const int readMetheoDataDisplayDataControllThermostatInterval = 10000;
-const int sendDataToInternetInterval = 60000;
 
-MetheoData metheoData;
-OledDisplay oledDisplay;
+const int readMetheoDataDisplayDataControllThermostatInterval = 5000;
+const int sendDataToInternetInterval = 10000;
+const int animInt = 1000;
+
+Data data;
+MatrixDisplay display;
 InternetConnection connection;
 
 void readMetheoDataDisplayDataControllThermostat();
 void sendDataToInternet();
+void animate();
 Ticker timerReadDataDisplayDataControllThermostat(readMetheoDataDisplayDataControllThermostat, readMetheoDataDisplayDataControllThermostatInterval);
 Ticker timerSendDataToInternet(sendDataToInternet, sendDataToInternetInterval);
+Ticker animation(animate, animInt);
 
 // Connections to APIs are OK
 bool apisAreConnected = false;
 
 void readMetheoDataDisplayDataControllThermostat()
 {
-    metheoData.setData();
-    oledDisplay.printMetheoDataToDisplay(metheoData);
-    ThermostatStatus status = Thermostat::controllThermostat(metheoData);
-
-    InternetConnection::setStatusToBlynk(status.message, status.color);
+    data.setData();    
+    ThermostatStatus status = Thermostat::controll(data);
+   
     InternetConnection::setIsHeatingToBlynk(status.isHeating);
+    data.heating = status.isHeating;
+    display.update(data);
+}
+
+void animate(){
+    if(data.anim == 1){
+        data.anim = 0;
+    } else {
+        data.anim = 1;
+    }
+
+    display.update(data);
 }
 
 void initializeInternetConnection()
@@ -44,11 +58,11 @@ void sendDataToInternet()
 {
     if (apisAreConnected)
     {
-        connection.setMeteoDataToThingSpeakObject(metheoData);
-        bool successThingSpeak = connection.sendDataToThingSpeakApi();
-        bool successBlynk = connection.sendDataToBlynk(metheoData);
+        connection.setMeteoDataToThingSpeakObject(data);
+        //bool successThingSpeak = connection.sendDataToThingSpeakApi();
+        bool successBlynk = connection.sendDataToBlynk(data);
 
-        if (successThingSpeak && successBlynk)
+        if (/*successThingSpeak &&*/ successBlynk)
         {
             Serial.println("Data was sent");
         }
@@ -69,12 +83,14 @@ void startTimers()
 {
     timerReadDataDisplayDataControllThermostat.start();
     timerSendDataToInternet.start();
+    animation.start();
 }
 
 void updateTimers()
 {
     timerReadDataDisplayDataControllThermostat.update();
     timerSendDataToInternet.update();
+    animation.update();
 }
 
 // Set up environment before loop

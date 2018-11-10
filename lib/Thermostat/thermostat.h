@@ -1,7 +1,7 @@
 #ifndef __Thermostat_H
 #define __Thermostat_H
 
-#include <MetheoData.h>
+#include <Data.h>
 #include <EEPROM.h>
 
 struct ThermostatStatus
@@ -14,9 +14,7 @@ struct ThermostatStatus
 class Thermostat
 {
   public:
-    static ThermostatStatus controllThermostat(MetheoData data);
-    static void setLed(int ledPin, bool isTurnOn);
-    static void turnOffLed();
+    static ThermostatStatus controll(Data data);
     static void initialize();
 };
 
